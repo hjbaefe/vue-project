@@ -1,97 +1,138 @@
 <script setup>
 import {ref} from "vue";
 
-const inputValue = ref('');
-const linkUrl = ref('https//vuejs.org');
-const isActive = ref(false);
-const buttonText = ref('클릭하세요');
-const counter = ref(0);
+const selectedTheme = ref('light');
+const fontSize = ref(16);
+const isHighlighted = ref(false);
+const selectedColor = ref('blue');
 
+const themes = ['light', 'dark', 'colorful'];
+const colors = ['blue', 'green', 'red', 'purple']
 </script>
 
 <template>
-  <div>
+  <div :class="['app', `theme-${selectedTheme}`]">
+    <h1>Vue 스타일링</h1>
 
-    <h1>템플릿 문법 기초</h1>
-
+    <!-- 1. scoped vs 전역 스타일 -->
     <section>
-      <h2>1. 이중 중괄호 {{ }}</h2>
-      <p>javascript 표현식을 텍스트로 출력합니다.</p>
+      <h2>1. scoped vs 전역 스타일</h2>
       <ul>
-        <li>카운터: {{ counter }}</li>
-        <li>연산: {{ counter + 10 }}</li>
-        <li>메서드 호출: {{ buttonText.toUpperCase() }}</li>
-        <li>삼항 연산자: {{ counter > 5 ? '5보다 큼' : '5 이하' }}</li>
+        <li>scoped: 현재 컴포넌트에만 적용 (권장)</li>
+        <li>전역: 모든 컴포넌트에 적용</li>
+        <li>scoped는 data-v-xxxxx 속성으로 스타일 격리</li>
       </ul>
+      <p class="scoped-example">이 텍스트는 scoped 스타일 적용</p>
     </section>
 
+    <!-- 2. 동적 클래스 바인딩 -->
     <section>
-      <h2>2. v-bind (축약: :)</h2>
-      <p>HTML 속성에 javascript 값을 바인딩 합니다.</p>
+      <h2>2. 동적 클래스 바인딩</h2>
+
+      <!-- 객체 문법 -->
       <p>
-        <a v-bind:href="linkURL" target="_blank">v-bind:href 사용</a>
-      </p>
-      <p>
-        <button :disabled="counter >= 10">
-          {{ counter >= 10 ? '최대값 도달' : '클릭 가능' }}
+        <button @click="isHighlighted = !isHighlighted">
+          하이라이트 토글
         </button>
       </p>
-    </section>
+      <p :class="{ highlighted: isHighlighted, bold: true }">
+        객체 문법: :class="{ className: condition }"
+      </p>
 
-    <section>
-      <h2>3. v-on (축약 : @)</h2>
-      <p>DOM 이벤트를 javascript 함수에 연결합니다.</p>
-      <p>
-        <button v-on:click="counter++">v-on:click {{ counter }}</button>
+      <!-- 배열 문법 -->
+      <p :class="['base-class', selectedColor]">
+        배열 문법: :class="['class1', variableClass]"
       </p>
       <p>
-        <button @click="counter++">@click 축약형 (권장)</button>
-      </p>
-      <p>
-        <button @click="counter = 0">리셋</button>
-      </p>
-      <p>
-        <input
-            type="text"
-            :value="inputValue"
-            @input="inputValue = $event.target.value"
-            placeholder="입력하세요"
-        >
-        <span>
-          입력값 : {{ inputValue }}
-        </span>
+        <select v-model="selectedColor">
+          <option v-for="color in colors" :key="color" :value="color">
+            {{ color }}
+          </option>
+        </select>
       </p>
     </section>
 
+    <!-- 3. 동적 스타일 바인딩 -->
     <section>
-      <h2>4. v-model (양방향 바인딩)</h2>
-      <p>v-bind + v-on 을 합친 편의 문법입니다</p>
+      <h2>3. 동적 스타일 바인딩</h2>
+
       <p>
-        <input v-model="inputValue" placeholder="v-model 사용">
-        <span>입력값 : {{ inputValue }}</span>
+        <label>
+          폰트 크기: {{ fontSize }}px
+          <input type="range" v-model="fontSize" min="12" max="24" />
+        </label>
+      </p>
+
+      <!-- 객체 문법 -->
+      <p :style="{ fontSize: fontSize + 'px', color: selectedColor }">
+        :style 객체 문법으로 인라인 스타일 적용
+      </p>
+
+      <!-- 여러 스타일 객체 바인딩 -->
+      <p :style="[{ fontWeight: 'bold' }, { fontStyle: 'italic' }]">
+        배열로 여러 스타일 객체 결합
       </p>
     </section>
+
+    <!-- 4. 테마 변경 예제 -->
     <section>
-      <h2>5. 클래스와 스타일 바인딩</h2>
-      <p><button @click="isActive = !isActive">
-        토글 (현재 : {{ isActive }})
-      </button></p>
-      <p :class="{active : isActive, highlight: counter > 5}">
-        클래스 바인딩 예시 (active : {{ isActive }}
+      <h2>4. 테마 변경 예제</h2>
+      <p>
+        <select v-model="selectedTheme">
+          <option v-for="theme in themes" :key="theme" :value="theme">
+            {{ theme }}
+          </option>
+        </select>
       </p>
-      <p :style="{ color: isActive ? 'green' : 'red', fontWeight: 'bold'}">
-       스타일 바인딩 예시
-      </p>
+      <p>현재 테마: {{ selectedTheme }}</p>
+    </section>
+
+    <!-- 정리 -->
+    <section class="summary">
+      <h2>정리</h2>
+      <ul>
+        <li>scoped: 컴포넌트 스타일 격리</li>
+        <li>:class - 객체: { className: boolean }</li>
+        <li>:class - 배열: ['class1', variable]</li>
+        <li>:style - 객체: { property: value }</li>
+        <li>CSS 변수와 함께 사용하면 더 강력</li>
+      </ul>
     </section>
   </div>
 </template>
 
+<!--
+  scoped 스타일: 이 컴포넌트에만 적용됩니다.
+  Vue가 자동으로 [data-v-xxxxx] 속성 선택자를 추가합니다.
+-->
 <style scoped>
+.app {
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+/* 테마 스타일 */
+.theme-light {
+  background: #fff;
+  color: #333;
+}
+
+.theme-dark {
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.theme-colorful {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
 section {
   margin: 20px 0;
   padding: 15px;
   border: 1px solid #ddd;
   border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 h2 {
@@ -99,7 +140,30 @@ h2 {
   margin-bottom: 10px;
 }
 
-button {
+/* 동적 클래스 예제 */
+.highlighted {
+  background: yellow;
+  padding: 5px;
+}
+
+.bold {
+  font-weight: bold;
+}
+
+/* 색상 클래스들 */
+.blue { color: blue; }
+.green { color: green; }
+.red { color: red; }
+.purple { color: purple; }
+
+.base-class {
+  padding: 10px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+}
+
+/* 기타 스타일 */
+button, select {
   margin: 5px;
   padding: 8px 16px;
   cursor: pointer;
@@ -108,36 +172,22 @@ button {
   border-radius: 4px;
 }
 
-button:hover:not(:disabled) {
+button:hover {
   background: #42b883;
   color: white;
 }
 
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+input[type="range"] {
+  margin-left: 10px;
 }
 
-input {
-  padding: 8px;
-  margin-right: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-a {
+.scoped-example {
   color: #42b883;
+  font-style: italic;
 }
 
-.active {
-  background: #42b883;
-  color: white;
-  padding: 10px;
-  border-radius: 4px;
-}
-
-.highlight {
-  border: 2px solid orange;
+.summary {
+  background: rgba(66, 184, 131, 0.1);
 }
 
 ul {
