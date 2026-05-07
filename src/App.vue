@@ -1,128 +1,183 @@
 <script setup>
 import {ref} from "vue";
 
-const isLoggedIn = ref(false);
-const userRole = ref('guest');
-const showDetails = ref(false);
-const toggleCount = ref(0);
+const fruits = ref(['사과', '바나나', '오렌지', '포도']);
 
-const roles = ['guest', 'user', 'admin']
+const users = ref([
+  {id: 1, name: '김철수', age: 25, active: true},
+  {id: 2, name: '이영희', age: 30, active: false},
+  {id: 3, name: '박민수', age: 28, active: true},
 
-function toggleLogin(){
-  isLoggedIn.value = !isLoggedIn.value
+])
+
+const userProfile = ref({
+  name: 'Vue 학습자',
+  email: 'vue@example.com',
+  role: 'developer',
+  level: 'beginner'
+})
+
+const newFruit = ref('');
+const newUser = ref({name: '', age: ''});
+let nextUserId = 4
+
+function addFruit() {
+  if (newFruit.value.trim()) {
+    fruits.value.push(newFruit.value.trim())
+    newFruit.value = ''
+  }
 }
-function toggleDetails(){
-  showDetails.value = !showDetails.value;
-  toggleCount.value++;
+
+function removeFruit(index) {
+  fruits.value.splice(index, 1)
 }
 
+function addUser() {
+  if (newUser.value.name && newUser.value.age) {
+    users.value.push({
+      id: nextUserId++,
+      name: newUser.value.name,
+      age: Number(newUser.value.age),
+      active: true
+    })
+    newUser.value = {name: '', age: ''}
+  }
+}
+
+function removeUser(id) {
+  const index = users.value.findIndex(u => u.id === id)
+  if (index !== -1) {
+    users.value.splice(index, 1)
+  }
+}
+
+function toggleActive(id) {
+  const user = users.value.find(u => u.id === id)
+  if (user) {
+    user.active = !user.active
+  }
+}
 </script>
 
 <template>
   <div>
-    <h1>조건부 렌더링</h1>
-    <section>
-      <h2>1. v-if / v-else</h2>
-      <button @click="toggleLogin">
-        {{ isLoggedIn ? '로그아웃' : '로그인' }}
-      </button>
-      <div v-if="isLoggedIn" class="box success">
-        환영합니다! 로그인 상태입니다.
-      </div>
-      <div v-else class="box warning">
-        로그인이 필요합니다.
-      </div>
-      <p class="note">
-        v-if 는 조건이 false 일 때 DOM 에서 요소를 완전히 제거합니다.
-      </p>
-    </section>
-    <section>
-      <h2>2. v-if / v-else-if / v-else</h2>
-      <p>
-        <label for="">역할 선택 : </label>
-        <select v-model="userRole">
-          <option v-for="role in roles" :key="role" :value="role">
-            {{ role }}
-          </option>
-        </select>
-      </p>
-      <div v-if="userRole === 'admin'" class="box admin" >
-        관리자 권한 : 모든 기능 사용 가능
-      </div>
-      <div v-else-if="userRole === 'user'" class="box user">
-        일반 사용자 : 기본 기능 사용 가능
-      </div>
-      <div v-else class="box guest">
-        게스트 : 읽기만 가능
-      </div>
-    </section>
+    <h1>리스트 렌더링</h1>
 
+    <!-- 1. 기본 v-for -->
     <section>
-      <h2>3. v-show</h2>
-      <button @click="toggleDetails">
-        상세정보 {{ showDetails ? '숨기기' : '보기'}}
-      </button>
-      <span class="counter">(토글 횟수: {{ toggleCount }} )</span>
-      <div v-show="showDetails" class="box info">
-        v-show 로 표시된 상세 정보입니다.
-        이 요소는 항상 DOM에 존재하며, display 속성만 토글입니다.
-      </div>
+      <h2>1. 기본 배열 순회</h2>
+      <ul>
+        <!-- item in items 형식 -->
+        <li v-for="fruit in fruits" :key="fruit">
+          {{ fruit }}
+        </li>
+      </ul>
       <p class="note">
-        v-show 는 display: none 으로 숨기므로 DOM 에 요소가 남아 있습니다.
+        :key는 Vue가 각 항목을 추적하는 데 사용합니다. 고유한 값을 사용하세요.
       </p>
     </section>
 
-    <!-- 4. v-if vs v-show 비교 -->
+    <!-- 2. 인덱스 사용 -->
     <section>
-      <h2>4. v-if vs v-show 비교</h2>
+      <h2>2. 인덱스와 함께 순회</h2>
+      <ul>
+        <!-- (item, index) in items 형식 -->
+        <li v-for="(fruit, index) in fruits" :key="index">
+          {{ index + 1 }}. {{ fruit }}
+          <button @click="removeFruit(index)" class="btn-small">삭제</button>
+        </li>
+      </ul>
+
+      <div class="add-form">
+        <input v-model="newFruit" placeholder="새 과일" @keyup.enter="addFruit" />
+        <button @click="addFruit">추가</button>
+      </div>
+
+      <p class="note">
+        인덱스를 key로 사용하는 것은 비권장입니다 (아이템 순서가 바뀔 수 있을 때).
+      </p>
+    </section>
+
+    <!-- 3. 객체 배열 순회 -->
+    <section>
+      <h2>3. 객체 배열 순회</h2>
       <table>
         <thead>
         <tr>
-          <th></th>
-          <th>v-if</th>
-          <th>v-show</th>
+          <th>ID</th>
+          <th>이름</th>
+          <th>나이</th>
+          <th>상태</th>
+          <th>액션</th>
         </tr>
         </thead>
         <tbody>
-        <tr>
-          <td>렌더링</td>
-          <td>조건부 렌더링 (DOM 추가/제거)</td>
-          <td>항상 렌더링 (display 토글)</td>
-        </tr>
-        <tr>
-          <td>초기 비용</td>
-          <td>낮음 (false면 렌더링 안함)</td>
-          <td>높음 (항상 렌더링)</td>
-        </tr>
-        <tr>
-          <td>토글 비용</td>
-          <td>높음 (DOM 조작)</td>
-          <td>낮음 (CSS만 변경)</td>
-        </tr>
-        <tr>
-          <td>사용 시점</td>
-          <td>조건이 자주 안 바뀔 때</td>
-          <td>자주 토글될 때</td>
+        <!-- 고유 id를 key로 사용 (권장) -->
+        <tr v-for="user in users" :key="user.id">
+          <td>{{ user.id }}</td>
+          <td>{{ user.name }}</td>
+          <td>{{ user.age }}</td>
+          <td>
+              <span :class="user.active ? 'active' : 'inactive'">
+                {{ user.active ? '활성' : '비활성' }}
+              </span>
+          </td>
+          <td>
+            <button @click="toggleActive(user.id)" class="btn-small">토글</button>
+            <button @click="removeUser(user.id)" class="btn-small btn-danger">삭제</button>
+          </td>
         </tr>
         </tbody>
       </table>
+
+      <div class="add-form">
+        <input v-model="newUser.name" placeholder="이름" />
+        <input v-model="newUser.age" type="number" placeholder="나이" />
+        <button @click="addUser">사용자 추가</button>
+      </div>
     </section>
 
-    <!-- 5. template에서 v-if 사용 -->
+    <!-- 4. 객체 속성 순회 -->
     <section>
-      <h2>5. template 태그와 v-if</h2>
-      <p>여러 요소를 조건부 렌더링할 때 template 태그를 사용합니다.</p>
+      <h2>4. 객체 속성 순회</h2>
+      <ul>
+        <!-- (value, key, index) in object 형식 -->
+        <li v-for="(value, key, index) in userProfile" :key="key">
+          {{ index + 1 }}. {{ key }}: {{ value }}
+        </li>
+      </ul>
+    </section>
 
-      <template v-if="isLoggedIn">
-        <p>로그인된 사용자 정보:</p>
-        <ul>
-          <li>이름: Vue 학습자</li>
-          <li>역할: {{ userRole }}</li>
-        </ul>
-      </template>
+    <!-- 5. 범위 v-for -->
+    <section>
+      <h2>5. 숫자 범위 순회</h2>
+      <p>
+        <!-- n in 숫자: 1부터 해당 숫자까지 -->
+        <span v-for="n in 5" :key="n" class="number-box">
+          {{ n }}
+        </span>
+      </p>
+    </section>
 
+    <!-- 6. v-for와 v-if 함께 사용 -->
+    <section>
+      <h2>6. 필터링 (v-for + 조건)</h2>
+      <p>활성 사용자만 표시:</p>
+      <ul>
+        <!--
+          v-for와 v-if를 같은 요소에 쓰지 마세요!
+          대신 computed나 필터링된 배열을 사용하세요.
+          여기서는 template 래퍼를 사용합니다.
+        -->
+        <template v-for="user in users" :key="user.id">
+          <li v-if="user.active">
+            {{ user.name }} ({{ user.age }}세)
+          </li>
+        </template>
+      </ul>
       <p class="note">
-        template 태그는 실제 DOM에 렌더링되지 않는 래퍼입니다.
+        v-for와 v-if를 같은 요소에 쓰지 않는 것이 좋습니다.
+        computed로 필터링하거나 template 래퍼를 사용하세요.
       </p>
     </section>
   </div>
@@ -141,55 +196,40 @@ h2 {
   margin-bottom: 10px;
 }
 
-.box {
+ul {
+  padding-left: 20px;
+}
+
+li {
+  margin: 5px 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
   margin: 10px 0;
-  padding: 15px;
-  border-radius: 4px;
 }
 
-.success {
-  background: #d4edda;
-  color: #155724;
+th, td {
+  border: 1px solid #ddd;
+  padding: 10px;
+  text-align: left;
 }
 
-.warning {
-  background: #fff3cd;
-  color: #856404;
+th {
+  background: #f5f5f5;
 }
 
-.admin {
-  background: #f8d7da;
-  color: #721c24;
+.active {
+  color: green;
+  font-weight: bold;
 }
 
-.user {
-  background: #d1ecf1;
-  color: #0c5460;
+.inactive {
+  color: #999;
 }
 
-.guest {
-  background: #e2e3e5;
-  color: #383d41;
-}
-
-.info {
-  background: #cce5ff;
-  color: #004085;
-}
-
-.note {
-  margin-top: 10px;
-  font-size: 14px;
-  color: #666;
-  font-style: italic;
-}
-
-.counter {
-  margin-left: 10px;
-  color: #666;
-}
-
-button, select {
+button {
   margin: 5px;
   padding: 8px 16px;
   cursor: pointer;
@@ -203,27 +243,51 @@ button:hover {
   color: white;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
+.btn-small {
+  padding: 4px 8px;
+  font-size: 12px;
 }
 
-th, td {
-  border: 1px solid #ddd;
+.btn-danger {
+  border-color: #dc3545;
+  color: #dc3545;
+}
+
+.btn-danger:hover {
+  background: #dc3545;
+  color: white;
+}
+
+.add-form {
+  margin-top: 15px;
   padding: 10px;
-  text-align: left;
+  background: #f9f9f9;
+  border-radius: 4px;
 }
 
-th {
-  background: #f5f5f5;
+.add-form input {
+  padding: 8px;
+  margin-right: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
 }
 
-ul {
-  padding-left: 20px;
+.number-box {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  margin: 5px;
+  background: #42b883;
+  color: white;
+  border-radius: 4px;
 }
 
-li {
-  margin: 5px 0;
+.note {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
 }
 </style>
