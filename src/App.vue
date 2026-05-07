@@ -1,94 +1,122 @@
 <!--
-  [3-1] 컴포넌트 분리
+  [3-2] Props
 
-  컴포넌트를 분리하면:
-  1. 코드 재사용성 향상
-  2. 유지보수 용이
-  3. 복잡한 UI를 작은 단위로 관리
+  부모에서 자식으로 데이터 전달
+  단방향 데이터 흐름 (One-way Data Flow)
 -->
 
 <script setup>
-/**
- * script setup에서는 import한 컴포넌트가 자동으로 등록됩니다.
- * 별도의 components: { UserCard } 옵션이 필요 없습니다.
- */
+import { ref } from 'vue'
 import UserCard from './components/UserCard.vue'
+
+// 사용자 데이터
+const users = ref([
+  { id: 1, name: '김철수', email: 'chulsoo@example.com', role: 'Admin', age: 28, active: true },
+  { id: 2, name: '이영희', email: 'younghee@example.com', role: 'Developer', age: 25, active: true },
+  { id: 3, name: '박민수', email: 'minsoo@example.com', role: 'Designer', age: 30, active: false },
+])
 </script>
 
 <template>
   <div>
-    <h1>컴포넌트 분리</h1>
+    <h1>Props - 부모에서 자식으로 데이터 전달</h1>
 
-    <!-- 1. 컴포넌트 사용 이유 -->
+    <!-- 1. Props 전달 방법 -->
     <section>
-      <h2>1. 왜 컴포넌트를 분리하나요?</h2>
-      <ul>
-        <li>재사용: 같은 UI를 여러 곳에서 사용</li>
-        <li>유지보수: 관련 코드를 한 파일에서 관리</li>
-        <li>가독성: App.vue가 너무 커지는 것을 방지</li>
-        <li>협업: 여러 개발자가 다른 컴포넌트 작업 가능</li>
-      </ul>
+      <h2>1. Props 전달 방법</h2>
+      <pre class="code-block">
+&lt;!-- 문자열 직접 전달 --&gt;
+&lt;UserCard name="홍길동" /&gt;
+
+&lt;!-- 변수 바인딩 (v-bind 또는 :) --&gt;
+&lt;UserCard :name="userName" /&gt;
+
+&lt;!-- 숫자는 v-bind 필요 --&gt;
+&lt;UserCard :age="25" /&gt;
+
+&lt;!-- 불리언: prop만 쓰면 true --&gt;
+&lt;UserCard active /&gt;
+&lt;UserCard :active="false" /&gt;
+      </pre>
     </section>
 
-    <!-- 2. 컴포넌트 사용 예시 -->
+    <!-- 2. 실제 사용 예시 -->
     <section>
-      <h2>2. UserCard 컴포넌트 사용</h2>
-      <p>아래는 별도 파일로 분리한 UserCard 컴포넌트입니다:</p>
-
+      <h2>2. UserCard 컴포넌트에 Props 전달</h2>
       <div class="cards-container">
-        <!-- 같은 컴포넌트를 여러 번 사용 -->
-        <UserCard />
-        <UserCard />
-        <UserCard />
+        <!-- 각 사용자 데이터를 props로 전달 -->
+        <UserCard
+            v-for="user in users"
+            :key="user.id"
+            :name="user.name"
+            :email="user.email"
+            :role="user.role"
+            :age="user.age"
+            :active="user.active"
+        />
       </div>
-
-      <p class="note">
-        현재는 모든 카드가 같은 데이터를 보여줍니다.
-        다음 커밋에서 props를 사용해 각각 다른 데이터를 전달합니다.
-      </p>
     </section>
 
-    <!-- 3. 파일 구조 -->
+    <!-- 3. Props 정의 -->
     <section>
-      <h2>3. 권장 파일 구조</h2>
+      <h2>3. 자식 컴포넌트에서 Props 정의</h2>
       <pre class="code-block">
-src/
-  components/
-    UserCard.vue      # 재사용 가능한 UI 컴포넌트
-    Button.vue
-    Modal.vue
-  views/              # 페이지 컴포넌트 (라우터 사용 시)
-    Home.vue
-    About.vue
-  App.vue             # 루트 컴포넌트
-  main.js             # 진입점
-      </pre>
-    </section>
+// 간단한 방식 (배열)
+defineProps(['name', 'email', 'role'])
 
-    <!-- 4. script setup에서의 컴포넌트 등록 -->
-    <section>
-      <h2>4. 컴포넌트 등록 방법</h2>
-
-      <h3>script setup (Vue 3 권장)</h3>
-      <pre class="code-block">
-&lt;script setup&gt;
-import UserCard from './components/UserCard.vue'
-// 자동으로 template에서 사용 가능!
-&lt;/script&gt;
-      </pre>
-
-      <h3>Options API (Vue 2 스타일)</h3>
-      <pre class="code-block">
-&lt;script&gt;
-import UserCard from './components/UserCard.vue'
-
-export default {
-  components: {
-    UserCard  // 명시적 등록 필요
+// 상세한 방식 (객체) - 권장
+defineProps({
+  name: {
+    type: String,
+    required: true  // 필수 prop
+  },
+  email: {
+    type: String,
+    default: '이메일 없음'  // 기본값
+  },
+  age: {
+    type: Number,
+    default: 0
+  },
+  active: {
+    type: Boolean,
+    default: true
   }
-}
-&lt;/script&gt;
+})
       </pre>
+    </section>
+
+    <!-- 4. 단방향 데이터 흐름 -->
+    <section>
+      <h2>4. 단방향 데이터 흐름</h2>
+      <ul>
+        <li>Props는 부모 -> 자식으로만 전달됩니다</li>
+        <li>자식 컴포넌트에서 props를 직접 수정하면 안됩니다</li>
+        <li>자식이 부모에게 알리려면 emit을 사용합니다 (다음 커밋)</li>
+      </ul>
+      <div class="diagram">
+        <div class="parent-box">
+          부모 (App.vue)
+          <div class="data-box">users 데이터</div>
+          <div class="arrow">props로 전달</div>
+        </div>
+        <div class="children-box">
+          <div class="child-box">자식 1</div>
+          <div class="child-box">자식 2</div>
+          <div class="child-box">자식 3</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Props 타입들 -->
+    <section>
+      <h2>5. Props에서 사용 가능한 타입들</h2>
+      <ul>
+        <li>String, Number, Boolean</li>
+        <li>Array, Object, Function</li>
+        <li>Date, Symbol</li>
+        <li>커스텀 클래스 (생성자 함수)</li>
+      </ul>
     </section>
   </div>
 </template>
@@ -104,11 +132,6 @@ section {
 h2 {
   color: #42b883;
   margin-bottom: 10px;
-}
-
-h3 {
-  margin: 15px 0 10px;
-  color: #333;
 }
 
 ul {
@@ -136,10 +159,53 @@ li {
   line-height: 1.5;
 }
 
-.note {
+.diagram {
   margin-top: 15px;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.parent-box {
+  display: inline-block;
+  padding: 15px 30px;
+  background: #42b883;
+  color: white;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.data-box {
+  margin-top: 10px;
+  padding: 5px 10px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 4px;
   font-size: 14px;
+}
+
+.arrow {
+  margin: 15px 0;
   color: #666;
-  font-style: italic;
+  font-size: 14px;
+}
+
+.arrow::after {
+  content: ' ↓';
+}
+
+.children-box {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 10px;
+}
+
+.child-box {
+  padding: 10px 20px;
+  background: #35495e;
+  color: white;
+  border-radius: 4px;
+  font-size: 14px;
 }
 </style>

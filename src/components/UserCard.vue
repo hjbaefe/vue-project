@@ -1,37 +1,62 @@
 <!--
-  컴포넌트 분리
+  [3-2] Props
 
-  UserCard.vue - 재사용 가능한 사용자 카드 컴포넌트
-
-  컴포넌트를 분리하는 이유:
-  1. 재사용성: 같은 UI를 여러 곳에서 사용
-  2. 유지보수성: 관련 코드를 한 곳에서 관리
-  3. 가독성: 복잡한 UI를 작은 단위로 분리
+  부모 컴포넌트에서 자식 컴포넌트로 데이터를 전달합니다.
+  Props는 단방향 데이터 흐름을 따릅니다 (부모 -> 자식).
 -->
 
 <script setup>
-/**
- * 현재는 하드코딩된 데이터를 사용합니다.
- * 다음 커밋에서 props를 통해 데이터를 받도록 개선합니다.
- */
 import { ref } from 'vue'
 
-const user = ref({
-  name: 'Vue 학습자',
-  email: 'vue@example.com',
-  role: 'Developer'
+/**
+ * defineProps: props 정의
+ *
+ * 타입만 지정하는 방식:
+ * const props = defineProps(['name', 'email', 'role'])
+ *
+ * 타입과 옵션을 지정하는 방식 (권장):
+ */
+const props = defineProps({
+  // 필수 prop (required: true)
+  name: {
+    type: String,
+    required: true
+  },
+  // 선택적 prop + 기본값
+  email: {
+    type: String,
+    default: '이메일 없음'
+  },
+  role: {
+    type: String,
+    default: 'User'
+  },
+  // 숫자 타입
+  age: {
+    type: Number,
+    default: 0
+  },
+  // 불리언 타입
+  active: {
+    type: Boolean,
+    default: true
+  }
 })
 
 const isExpanded = ref(false)
 </script>
 
 <template>
-  <div class="user-card">
+  <div class="user-card" :class="{ inactive: !active }">
     <div class="user-header">
-      <div class="avatar">{{ user.name.charAt(0) }}</div>
+      <!-- props는 template에서 직접 사용 가능 -->
+      <div class="avatar" :class="{ 'avatar-inactive': !active }">
+        {{ name.charAt(0) }}
+      </div>
       <div class="user-info">
-        <h3>{{ user.name }}</h3>
-        <p>{{ user.role }}</p>
+        <h3>{{ name }}</h3>
+        <p>{{ role }}</p>
+        <span v-if="!active" class="status-badge">비활성</span>
       </div>
     </div>
 
@@ -40,7 +65,9 @@ const isExpanded = ref(false)
     </button>
 
     <div v-show="isExpanded" class="user-details">
-      <p>Email: {{ user.email }}</p>
+      <p>Email: {{ email }}</p>
+      <p v-if="age > 0">Age: {{ age }}</p>
+      <p>Status: {{ active ? '활성' : '비활성' }}</p>
     </div>
   </div>
 </template>
@@ -52,6 +79,12 @@ const isExpanded = ref(false)
   padding: 15px;
   max-width: 300px;
   background: white;
+  transition: opacity 0.3s;
+}
+
+.user-card.inactive {
+  opacity: 0.7;
+  background: #f9f9f9;
 }
 
 .user-header {
@@ -73,6 +106,14 @@ const isExpanded = ref(false)
   font-weight: bold;
 }
 
+.avatar-inactive {
+  background: #999;
+}
+
+.user-info {
+  position: relative;
+}
+
 .user-info h3 {
   margin: 0;
   color: #333;
@@ -82,6 +123,16 @@ const isExpanded = ref(false)
   margin: 5px 0 0;
   color: #666;
   font-size: 14px;
+}
+
+.status-badge {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 2px 8px;
+  background: #ffc107;
+  color: #333;
+  font-size: 12px;
+  border-radius: 10px;
 }
 
 .toggle-btn {
