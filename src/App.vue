@@ -1,136 +1,228 @@
 <!--
-  [3-4] v-model과 컴포넌트
+  [4-1] Computed - 계산된 속성
 
-  커스텀 컴포넌트에서 v-model 지원하기
+  반응형 데이터를 기반으로 파생된 값을 계산합니다.
+  의존성이 변경될 때만 재계산됩니다 (캐싱).
 -->
 
 <script setup>
-import { ref } from 'vue'
-import CustomInput from './components/CustomInput.vue'
-import CustomInputV2 from './components/CustomInputV2.vue'
+import { ref, computed } from 'vue'
 
-const name = ref('')
-const email = ref('')
-const message = ref('')
+// 원본 데이터
+const firstName = ref('길동')
+const lastName = ref('홍')
+const items = ref([
+  { name: '사과', price: 1000, quantity: 3 },
+  { name: '바나나', price: 1500, quantity: 2 },
+  { name: '오렌지', price: 2000, quantity: 1 },
+])
+const searchQuery = ref('')
+const users = ref([
+  { name: '김철수', age: 25, active: true },
+  { name: '이영희', age: 30, active: false },
+  { name: '박민수', age: 28, active: true },
+  { name: '최지현', age: 22, active: true },
+])
+
+/**
+ * computed: 반응형 데이터에서 파생된 값
+ *
+ * 특징:
+ * 1. 의존성 기반 캐싱 - 의존하는 값이 변경될 때만 재계산
+ * 2. 읽기 전용 (기본) - setter를 추가하면 쓰기 가능
+ * 3. 동기적 - 비동기 작업은 watch 사용
+ */
+
+// 기본 computed (getter만)
+const fullName = computed(() => {
+  console.log('fullName 계산됨')  // 캐싱 확인용
+  return `${lastName.value}${firstName.value}`
+})
+
+// 총 금액 계산
+const totalPrice = computed(() => {
+  return items.value.reduce((sum, item) => {
+    return sum + (item.price * item.quantity)
+  }, 0)
+})
+
+// 검색 필터링
+const filteredUsers = computed(() => {
+  if (!searchQuery.value) {
+    return users.value
+  }
+  return users.value.filter(user =>
+      user.name.includes(searchQuery.value)
+  )
+})
+
+// 활성 사용자만
+const activeUsers = computed(() => {
+  return users.value.filter(user => user.active)
+})
+
+// 통계
+const userStats = computed(() => ({
+  total: users.value.length,
+  active: activeUsers.value.length,
+  averageAge: Math.round(
+      users.value.reduce((sum, u) => sum + u.age, 0) / users.value.length
+  )
+}))
+
+// getter와 setter를 가진 computed
+const fullNameWritable = computed({
+  get() {
+    return `${lastName.value}${firstName.value}`
+  },
+  set(newValue) {
+    // 성과 이름 분리 (첫 글자가 성)
+    lastName.value = newValue.charAt(0)
+    firstName.value = newValue.slice(1)
+  }
+})
+
+// 아이템 추가
+function addItem() {
+  items.value.push({
+    name: '포도',
+    price: 3000,
+    quantity: 1
+  })
+}
+
+// 수량 변경
+function increaseQuantity(index) {
+  items.value[index].quantity++
+}
 </script>
 
 <template>
   <div>
-    <h1>v-model과 컴포넌트</h1>
+    <h1>Computed - 계산된 속성</h1>
 
-    <!-- 1. v-model 동작 원리 -->
+    <!-- 1. 기본 computed -->
     <section>
-      <h2>1. v-model 동작 원리</h2>
-      <p>v-model은 props와 emit의 조합입니다:</p>
-      <pre class="code-block">
-&lt;!-- 이 코드는 --&gt;
-&lt;CustomInput v-model="name" /&gt;
-
-&lt;!-- 아래와 동일합니다 --&gt;
-&lt;CustomInput
-  :modelValue="name"
-  @update:modelValue="name = $event"
-/&gt;
-      </pre>
-    </section>
-
-    <!-- 2. 방법 1: props + emit -->
-    <section>
-      <h2>2. 방법 1: defineProps + defineEmits</h2>
-      <pre class="code-block">
-// 자식 컴포넌트
-const props = defineProps({
-  modelValue: String
-})
-const emit = defineEmits(['update:modelValue'])
-
-function handleInput(event) {
-  emit('update:modelValue', event.target.value)
-}
-      </pre>
-
-      <CustomInput
-          v-model="name"
-          label="이름"
-          placeholder="이름을 입력하세요"
-      />
-      <p>입력된 이름: {{ name }}</p>
-    </section>
-
-    <!-- 3. 방법 2: defineModel (Vue 3.4+) -->
-    <section>
-      <h2>3. 방법 2: defineModel (Vue 3.4+, 권장)</h2>
-      <pre class="code-block">
-// 자식 컴포넌트 - 훨씬 간단!
-const model = defineModel()
-
-// template에서
-&lt;input v-model="model" /&gt;
-      </pre>
-
-      <CustomInputV2
-          v-model="email"
-          label="이메일"
-          placeholder="이메일을 입력하세요"
-      />
-      <p>입력된 이메일: {{ email }}</p>
-    </section>
-
-    <!-- 4. 여러 v-model 사용 -->
-    <section>
-      <h2>4. 여러 v-model (Named v-model)</h2>
-      <pre class="code-block">
-&lt;!-- 부모 컴포넌트 --&gt;
-&lt;UserForm
-  v-model:firstName="first"
-  v-model:lastName="last"
-/&gt;
-
-&lt;!-- 자식 컴포넌트 --&gt;
-const firstName = defineModel('firstName')
-const lastName = defineModel('lastName')
-      </pre>
-    </section>
-
-    <!-- 5. v-model 수정자 -->
-    <section>
-      <h2>5. v-model 수정자 (Modifiers)</h2>
-      <pre class="code-block">
-&lt;!-- 내장 수정자 --&gt;
-&lt;input v-model.trim="text" /&gt;      &lt;!-- 앞뒤 공백 제거 --&gt;
-&lt;input v-model.number="age" /&gt;     &lt;!-- 숫자로 변환 --&gt;
-&lt;input v-model.lazy="text" /&gt;      &lt;!-- change 이벤트에서 동기화 --&gt;
-
-&lt;!-- 커스텀 수정자 --&gt;
-&lt;CustomInput v-model.capitalize="text" /&gt;
-      </pre>
-    </section>
-
-    <!-- 6. 실습 -->
-    <section>
-      <h2>6. 실시간 미리보기</h2>
-      <CustomInput
-          v-model="message"
-          label="메시지"
-          placeholder="메시지를 입력하세요"
-      />
-      <div class="preview">
-        <h3>미리보기:</h3>
-        <p v-if="message">{{ message }}</p>
-        <p v-else class="placeholder">메시지를 입력하면 여기에 표시됩니다.</p>
+      <h2>1. 기본 사용법</h2>
+      <div class="input-group">
+        <label>
+          성: <input v-model="lastName" />
+        </label>
+        <label>
+          이름: <input v-model="firstName" />
+        </label>
       </div>
+      <p>전체 이름: <strong>{{ fullName }}</strong></p>
+      <p class="note">
+        computed는 의존하는 값(lastName, firstName)이 변경될 때만 재계산됩니다.
+      </p>
     </section>
 
-    <!-- 7. 요약 -->
-    <section class="summary">
-      <h2>7. 정리</h2>
+    <!-- 2. 장바구니 예제 -->
+    <section>
+      <h2>2. 장바구니 총 금액</h2>
+      <table>
+        <thead>
+        <tr>
+          <th>상품</th>
+          <th>가격</th>
+          <th>수량</th>
+          <th>소계</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="(item, index) in items" :key="index">
+          <td>{{ item.name }}</td>
+          <td>{{ item.price.toLocaleString() }}원</td>
+          <td>
+            <button @click="increaseQuantity(index)">+</button>
+            {{ item.quantity }}
+          </td>
+          <td>{{ (item.price * item.quantity).toLocaleString() }}원</td>
+        </tr>
+        </tbody>
+        <tfoot>
+        <tr>
+          <td colspan="3"><strong>총 금액</strong></td>
+          <td><strong>{{ totalPrice.toLocaleString() }}원</strong></td>
+        </tr>
+        </tfoot>
+      </table>
+      <button @click="addItem">상품 추가</button>
+    </section>
+
+    <!-- 3. 필터링 -->
+    <section>
+      <h2>3. 검색 필터링</h2>
+      <input v-model="searchQuery" placeholder="이름 검색..." />
       <ul>
-        <li>v-model = :modelValue + @update:modelValue</li>
-        <li>방법 1: defineProps + defineEmits (모든 Vue 3 버전)</li>
-        <li>방법 2: defineModel (Vue 3.4+, 더 간단)</li>
-        <li>여러 v-model: v-model:propName</li>
-        <li>수정자: v-model.trim, v-model.number 등</li>
+        <li v-for="user in filteredUsers" :key="user.name">
+          {{ user.name }} ({{ user.age }}세)
+          <span v-if="!user.active" class="inactive">[비활성]</span>
+        </li>
       </ul>
+      <p>검색 결과: {{ filteredUsers.length }}명</p>
+    </section>
+
+    <!-- 4. 통계 -->
+    <section>
+      <h2>4. 통계 computed</h2>
+      <ul>
+        <li>전체 사용자: {{ userStats.total }}명</li>
+        <li>활성 사용자: {{ userStats.active }}명</li>
+        <li>평균 나이: {{ userStats.averageAge }}세</li>
+      </ul>
+    </section>
+
+    <!-- 5. getter + setter -->
+    <section>
+      <h2>5. Writable Computed (getter + setter)</h2>
+      <p>
+        <input v-model="fullNameWritable" placeholder="전체 이름 입력" />
+      </p>
+      <p>성: {{ lastName }}, 이름: {{ firstName }}</p>
+      <pre class="code-block">
+const fullNameWritable = computed({
+  get() {
+    return lastName.value + firstName.value
+  },
+  set(newValue) {
+    lastName.value = newValue.charAt(0)
+    firstName.value = newValue.slice(1)
+  }
+})
+      </pre>
+    </section>
+
+    <!-- 6. computed vs method -->
+    <section>
+      <h2>6. Computed vs Method</h2>
+      <table class="comparison">
+        <thead>
+        <tr>
+          <th></th>
+          <th>computed</th>
+          <th>method</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td>캐싱</td>
+          <td>의존성 기반 캐싱</td>
+          <td>캐싱 없음 (매번 실행)</td>
+        </tr>
+        <tr>
+          <td>호출</td>
+          <td>{{  fullName }}</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>용도</td>
+          <td>파생 데이터</td>
+          <td>액션, 이벤트 핸들러</td>
+        </tr>
+        </tbody>
+      </table>
     </section>
   </div>
 </template>
@@ -148,37 +240,56 @@ h2 {
   margin-bottom: 10px;
 }
 
-.code-block {
+.input-group {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+.input-group label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+input {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 10px;
+  text-align: left;
+}
+
+th {
   background: #f5f5f5;
-  padding: 15px;
+}
+
+tfoot td {
+  background: #f0f9f4;
+}
+
+button {
+  margin: 5px;
+  padding: 8px 16px;
+  cursor: pointer;
+  border: 1px solid #42b883;
+  background: white;
   border-radius: 4px;
-  overflow-x: auto;
-  font-family: monospace;
-  font-size: 14px;
-  line-height: 1.5;
-  margin-bottom: 15px;
 }
 
-.preview {
-  margin-top: 15px;
-  padding: 15px;
-  background: #f9f9f9;
-  border-radius: 4px;
-  border-left: 4px solid #42b883;
-}
-
-.preview h3 {
-  margin: 0 0 10px;
-  color: #333;
-}
-
-.preview .placeholder {
-  color: #999;
-  font-style: italic;
-}
-
-.summary {
-  background: rgba(66, 184, 131, 0.1);
+button:hover {
+  background: #42b883;
+  color: white;
 }
 
 ul {
@@ -189,7 +300,28 @@ li {
   margin: 5px 0;
 }
 
-p {
-  margin: 10px 0;
+.inactive {
+  color: #999;
+  font-size: 12px;
+}
+
+.note {
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
+}
+
+.code-block {
+  background: #f5f5f5;
+  padding: 15px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+.comparison th, .comparison td {
+  text-align: center;
 }
 </style>
