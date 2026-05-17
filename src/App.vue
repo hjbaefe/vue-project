@@ -1,228 +1,258 @@
 <!--
-  [4-1] Computed - 계산된 속성
+  [4-2] Watch - 감시자
 
-  반응형 데이터를 기반으로 파생된 값을 계산합니다.
-  의존성이 변경될 때만 재계산됩니다 (캐싱).
+  반응형 데이터의 변화를 감시하고 부수 효과(side effect)를 실행합니다.
+  API 호출, 로깅, 외부 상태 동기화 등에 사용합니다.
 -->
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, watch, watchEffect } from 'vue'
 
-// 원본 데이터
-const firstName = ref('길동')
-const lastName = ref('홍')
-const items = ref([
-  { name: '사과', price: 1000, quantity: 3 },
-  { name: '바나나', price: 1500, quantity: 2 },
-  { name: '오렌지', price: 2000, quantity: 1 },
-])
+// 감시할 데이터
 const searchQuery = ref('')
-const users = ref([
-  { name: '김철수', age: 25, active: true },
-  { name: '이영희', age: 30, active: false },
-  { name: '박민수', age: 28, active: true },
-  { name: '최지현', age: 22, active: true },
-])
+const count = ref(0)
+const user = ref({ name: '홍길동', age: 25 })
+const isOnline = ref(true)
+
+// 로그
+const logs = ref([])
+
+function addLog(message) {
+  logs.value.unshift({
+    time: new Date().toLocaleTimeString(),
+    message
+  })
+  if (logs.value.length > 10) logs.value.pop()
+}
 
 /**
- * computed: 반응형 데이터에서 파생된 값
- *
- * 특징:
- * 1. 의존성 기반 캐싱 - 의존하는 값이 변경될 때만 재계산
- * 2. 읽기 전용 (기본) - setter를 추가하면 쓰기 가능
- * 3. 동기적 - 비동기 작업은 watch 사용
+ * 1. 기본 watch
+ * watch(source, callback)
  */
-
-// 기본 computed (getter만)
-const fullName = computed(() => {
-  console.log('fullName 계산됨')  // 캐싱 확인용
-  return `${lastName.value}${firstName.value}`
+watch(searchQuery, (newValue, oldValue) => {
+  addLog(`검색어 변경: "${oldValue}" -> "${newValue}"`)
 })
 
-// 총 금액 계산
-const totalPrice = computed(() => {
-  return items.value.reduce((sum, item) => {
-    return sum + (item.price * item.quantity)
-  }, 0)
-})
+/**
+ * 2. immediate 옵션
+ * 컴포넌트 마운트 시 즉시 실행
+ */
+watch(count, (newValue) => {
+  addLog(`카운트: ${newValue}`)
+}, { immediate: true })
 
-// 검색 필터링
-const filteredUsers = computed(() => {
-  if (!searchQuery.value) {
-    return users.value
+/**
+ * 3. deep 옵션
+ * 객체 내부 속성 변화도 감시
+ */
+watch(user, (newValue) => {
+  addLog(`사용자 변경: ${JSON.stringify(newValue)}`)
+}, { deep: true })
+
+/**
+ * 4. 특정 속성만 감시
+ * getter 함수 사용
+ */
+watch(
+    () => user.value.age,
+    (newAge, oldAge) => {
+      addLog(`나이 변경: ${oldAge} -> ${newAge}`)
+    }
+)
+
+/**
+ * 5. 여러 소스 감시
+ */
+watch(
+    [searchQuery, count],
+    ([newQuery, newCount], [oldQuery, oldCount]) => {
+      // 둘 중 하나라도 변경되면 실행
+      console.log('multiple watch:', { newQuery, newCount })
+    }
+)
+
+/**
+ * 6. watchEffect
+ * 콜백 내에서 사용된 모든 반응형 데이터를 자동으로 추적
+ */
+watchEffect(() => {
+  // isOnline이 변경될 때마다 실행
+  if (!isOnline.value) {
+    console.log('오프라인 상태입니다')
   }
-  return users.value.filter(user =>
-      user.name.includes(searchQuery.value)
-  )
 })
 
-// 활성 사용자만
-const activeUsers = computed(() => {
-  return users.value.filter(user => user.active)
-})
+// 검색 시뮬레이션 (디바운스 예제)
+const searchResults = ref([])
+const isSearching = ref(false)
+let searchTimeout = null
 
-// 통계
-const userStats = computed(() => ({
-  total: users.value.length,
-  active: activeUsers.value.length,
-  averageAge: Math.round(
-      users.value.reduce((sum, u) => sum + u.age, 0) / users.value.length
-  )
-}))
+watch(searchQuery, (query) => {
+  // 이전 타이머 취소
+  if (searchTimeout) clearTimeout(searchTimeout)
 
-// getter와 setter를 가진 computed
-const fullNameWritable = computed({
-  get() {
-    return `${lastName.value}${firstName.value}`
-  },
-  set(newValue) {
-    // 성과 이름 분리 (첫 글자가 성)
-    lastName.value = newValue.charAt(0)
-    firstName.value = newValue.slice(1)
+  if (!query) {
+    searchResults.value = []
+    return
   }
+
+  isSearching.value = true
+
+  // 디바운스: 300ms 후에 검색
+  searchTimeout = setTimeout(() => {
+    // 실제로는 API 호출
+    searchResults.value = [
+      `${query} 관련 결과 1`,
+      `${query} 관련 결과 2`,
+      `${query} 관련 결과 3`,
+    ]
+    isSearching.value = false
+    addLog(`검색 완료: "${query}"`)
+  }, 300)
 })
-
-// 아이템 추가
-function addItem() {
-  items.value.push({
-    name: '포도',
-    price: 3000,
-    quantity: 1
-  })
-}
-
-// 수량 변경
-function increaseQuantity(index) {
-  items.value[index].quantity++
-}
 </script>
 
 <template>
   <div>
-    <h1>Computed - 계산된 속성</h1>
+    <h1>Watch - 감시자</h1>
 
-    <!-- 1. 기본 computed -->
+    <!-- 1. 기본 watch -->
     <section>
-      <h2>1. 기본 사용법</h2>
+      <h2>1. 검색어 감시</h2>
+      <input v-model="searchQuery" placeholder="검색어 입력..." />
+      <p v-if="isSearching">검색 중...</p>
+      <ul v-else-if="searchResults.length">
+        <li v-for="result in searchResults" :key="result">{{ result }}</li>
+      </ul>
+      <p class="note">
+        입력 후 300ms 디바운스 적용 (타이핑이 멈추면 검색)
+      </p>
+    </section>
+
+    <!-- 2. 카운터 (immediate) -->
+    <section>
+      <h2>2. 카운터 감시 (immediate)</h2>
+      <p>카운트: {{ count }}</p>
+      <button @click="count++">+1</button>
+      <button @click="count--">-1</button>
+      <pre class="code-block">
+watch(count, (newValue) => {
+  console.log('카운트:', newValue)
+}, { immediate: true })  // 초기값도 실행
+      </pre>
+    </section>
+
+    <!-- 3. 객체 감시 (deep) -->
+    <section>
+      <h2>3. 객체 감시 (deep)</h2>
       <div class="input-group">
         <label>
-          성: <input v-model="lastName" />
+          이름: <input v-model="user.name" />
         </label>
         <label>
-          이름: <input v-model="firstName" />
+          나이: <input v-model.number="user.age" type="number" />
         </label>
       </div>
-      <p>전체 이름: <strong>{{ fullName }}</strong></p>
-      <p class="note">
-        computed는 의존하는 값(lastName, firstName)이 변경될 때만 재계산됩니다.
-      </p>
-    </section>
-
-    <!-- 2. 장바구니 예제 -->
-    <section>
-      <h2>2. 장바구니 총 금액</h2>
-      <table>
-        <thead>
-        <tr>
-          <th>상품</th>
-          <th>가격</th>
-          <th>수량</th>
-          <th>소계</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr v-for="(item, index) in items" :key="index">
-          <td>{{ item.name }}</td>
-          <td>{{ item.price.toLocaleString() }}원</td>
-          <td>
-            <button @click="increaseQuantity(index)">+</button>
-            {{ item.quantity }}
-          </td>
-          <td>{{ (item.price * item.quantity).toLocaleString() }}원</td>
-        </tr>
-        </tbody>
-        <tfoot>
-        <tr>
-          <td colspan="3"><strong>총 금액</strong></td>
-          <td><strong>{{ totalPrice.toLocaleString() }}원</strong></td>
-        </tr>
-        </tfoot>
-      </table>
-      <button @click="addItem">상품 추가</button>
-    </section>
-
-    <!-- 3. 필터링 -->
-    <section>
-      <h2>3. 검색 필터링</h2>
-      <input v-model="searchQuery" placeholder="이름 검색..." />
-      <ul>
-        <li v-for="user in filteredUsers" :key="user.name">
-          {{ user.name }} ({{ user.age }}세)
-          <span v-if="!user.active" class="inactive">[비활성]</span>
-        </li>
-      </ul>
-      <p>검색 결과: {{ filteredUsers.length }}명</p>
-    </section>
-
-    <!-- 4. 통계 -->
-    <section>
-      <h2>4. 통계 computed</h2>
-      <ul>
-        <li>전체 사용자: {{ userStats.total }}명</li>
-        <li>활성 사용자: {{ userStats.active }}명</li>
-        <li>평균 나이: {{ userStats.averageAge }}세</li>
-      </ul>
-    </section>
-
-    <!-- 5. getter + setter -->
-    <section>
-      <h2>5. Writable Computed (getter + setter)</h2>
-      <p>
-        <input v-model="fullNameWritable" placeholder="전체 이름 입력" />
-      </p>
-      <p>성: {{ lastName }}, 이름: {{ firstName }}</p>
+      <p>사용자: {{ user.name }} ({{ user.age }}세)</p>
       <pre class="code-block">
-const fullNameWritable = computed({
-  get() {
-    return lastName.value + firstName.value
-  },
-  set(newValue) {
-    lastName.value = newValue.charAt(0)
-    firstName.value = newValue.slice(1)
+watch(user, (newValue) => {
+  console.log('변경됨:', newValue)
+}, { deep: true })  // 내부 속성 변화도 감시
+      </pre>
+    </section>
+
+    <!-- 4. 특정 속성 감시 -->
+    <section>
+      <h2>4. 특정 속성만 감시</h2>
+      <pre class="code-block">
+// getter 함수 사용
+watch(
+  () => user.value.age,
+  (newAge, oldAge) => {
+    console.log(`나이: ${oldAge} -> ${newAge}`)
+  }
+)
+      </pre>
+    </section>
+
+    <!-- 5. watchEffect -->
+    <section>
+      <h2>5. watchEffect</h2>
+      <label>
+        <input type="checkbox" v-model="isOnline" />
+        온라인 상태: {{ isOnline ? '온라인' : '오프라인' }}
+      </label>
+      <pre class="code-block">
+// 콜백 내 사용된 반응형 데이터 자동 추적
+watchEffect(() => {
+  if (!isOnline.value) {
+    console.log('오프라인 상태')
   }
 })
       </pre>
     </section>
 
-    <!-- 6. computed vs method -->
+    <!-- 6. watch vs watchEffect -->
     <section>
-      <h2>6. Computed vs Method</h2>
-      <table class="comparison">
+      <h2>6. watch vs watchEffect 비교</h2>
+      <table>
         <thead>
         <tr>
           <th></th>
-          <th>computed</th>
-          <th>method</th>
+          <th>watch</th>
+          <th>watchEffect</th>
         </tr>
         </thead>
         <tbody>
         <tr>
-          <td>캐싱</td>
-          <td>의존성 기반 캐싱</td>
-          <td>캐싱 없음 (매번 실행)</td>
+          <td>추적</td>
+          <td>명시적으로 지정</td>
+          <td>자동 추적</td>
         </tr>
         <tr>
-          <td>호출</td>
-          <td>{{  fullName }}</td>
-          <td></td>
+          <td>이전 값</td>
+          <td>접근 가능</td>
+          <td>접근 불가</td>
+        </tr>
+        <tr>
+          <td>초기 실행</td>
+          <td>immediate 필요</td>
+          <td>즉시 실행</td>
         </tr>
         <tr>
           <td>용도</td>
-          <td>파생 데이터</td>
-          <td>액션, 이벤트 핸들러</td>
+          <td>특정 값 변화 반응</td>
+          <td>여러 값 동기화</td>
         </tr>
         </tbody>
       </table>
+    </section>
+
+    <!-- 7. 로그 -->
+    <section>
+      <h2>7. 실행 로그</h2>
+      <div class="log-container">
+        <div v-for="(log, i) in logs" :key="i" class="log-item">
+          <span class="log-time">{{ log.time }}</span>
+          <span class="log-message">{{ log.message }}</span>
+        </div>
+        <p v-if="logs.length === 0" class="no-logs">
+          위의 값들을 변경해보세요.
+        </p>
+      </div>
+    </section>
+
+    <!-- 8. 정리 -->
+    <section class="summary">
+      <h2>8. 정리</h2>
+      <ul>
+        <li>watch: 특정 값의 변화를 감시</li>
+        <li>immediate: 컴포넌트 마운트 시 즉시 실행</li>
+        <li>deep: 객체 내부 속성 변화도 감시</li>
+        <li>getter 함수로 특정 속성만 감시 가능</li>
+        <li>watchEffect: 자동 의존성 추적</li>
+        <li>부수 효과(API 호출, 로깅 등)에 사용</li>
+      </ul>
     </section>
   </div>
 </template>
@@ -252,10 +282,26 @@ h2 {
   gap: 5px;
 }
 
-input {
+input[type="text"],
+input[type="number"],
+input:not([type]) {
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
+}
+
+button {
+  margin: 5px;
+  padding: 8px 16px;
+  cursor: pointer;
+  border: 1px solid #42b883;
+  background: white;
+  border-radius: 4px;
+}
+
+button:hover {
+  background: #42b883;
+  color: white;
 }
 
 table {
@@ -274,41 +320,12 @@ th {
   background: #f5f5f5;
 }
 
-tfoot td {
-  background: #f0f9f4;
-}
-
-button {
-  margin: 5px;
-  padding: 8px 16px;
-  cursor: pointer;
-  border: 1px solid #42b883;
-  background: white;
-  border-radius: 4px;
-}
-
-button:hover {
-  background: #42b883;
-  color: white;
-}
-
 ul {
   padding-left: 20px;
 }
 
 li {
   margin: 5px 0;
-}
-
-.inactive {
-  color: #999;
-  font-size: 12px;
-}
-
-.note {
-  font-size: 14px;
-  color: #666;
-  font-style: italic;
 }
 
 .code-block {
@@ -319,9 +336,41 @@ li {
   font-size: 14px;
   line-height: 1.5;
   overflow-x: auto;
+  margin-top: 10px;
 }
 
-.comparison th, .comparison td {
-  text-align: center;
+.note {
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
+}
+
+.log-container {
+  background: #1a1a1a;
+  color: #00ff00;
+  padding: 15px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 14px;
+  min-height: 150px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.log-item {
+  margin: 5px 0;
+}
+
+.log-time {
+  color: #888;
+  margin-right: 10px;
+}
+
+.no-logs {
+  color: #666;
+}
+
+.summary {
+  background: rgba(66, 184, 131, 0.1);
 }
 </style>
