@@ -1,376 +1,216 @@
 <!--
-  [4-2] Watch - 감시자
+  [5-1] Vue Router 기초 설정
 
-  반응형 데이터의 변화를 감시하고 부수 효과(side effect)를 실행합니다.
-  API 호출, 로깅, 외부 상태 동기화 등에 사용합니다.
+  App.vue에서 RouterLink와 RouterView를 사용합니다.
 -->
 
 <script setup>
-import { ref, watch, watchEffect } from 'vue'
-
-// 감시할 데이터
-const searchQuery = ref('')
-const count = ref(0)
-const user = ref({ name: '홍길동', age: 25 })
-const isOnline = ref(true)
-
-// 로그
-const logs = ref([])
-
-function addLog(message) {
-  logs.value.unshift({
-    time: new Date().toLocaleTimeString(),
-    message
-  })
-  if (logs.value.length > 10) logs.value.pop()
-}
-
 /**
- * 1. 기본 watch
- * watch(source, callback)
+ * RouterLink: 선언적 네비게이션 (a 태그 대신 사용)
+ * RouterView: 현재 라우트에 맞는 컴포넌트가 렌더링되는 위치
+ *
+ * 두 컴포넌트는 vue-router에서 자동으로 등록됩니다.
  */
-watch(searchQuery, (newValue, oldValue) => {
-  addLog(`검색어 변경: "${oldValue}" -> "${newValue}"`)
-})
-
-/**
- * 2. immediate 옵션
- * 컴포넌트 마운트 시 즉시 실행
- */
-watch(count, (newValue) => {
-  addLog(`카운트: ${newValue}`)
-}, { immediate: true })
-
-/**
- * 3. deep 옵션
- * 객체 내부 속성 변화도 감시
- */
-watch(user, (newValue) => {
-  addLog(`사용자 변경: ${JSON.stringify(newValue)}`)
-}, { deep: true })
-
-/**
- * 4. 특정 속성만 감시
- * getter 함수 사용
- */
-watch(
-    () => user.value.age,
-    (newAge, oldAge) => {
-      addLog(`나이 변경: ${oldAge} -> ${newAge}`)
-    }
-)
-
-/**
- * 5. 여러 소스 감시
- */
-watch(
-    [searchQuery, count],
-    ([newQuery, newCount], [oldQuery, oldCount]) => {
-      // 둘 중 하나라도 변경되면 실행
-      console.log('multiple watch:', { newQuery, newCount })
-    }
-)
-
-/**
- * 6. watchEffect
- * 콜백 내에서 사용된 모든 반응형 데이터를 자동으로 추적
- */
-watchEffect(() => {
-  // isOnline이 변경될 때마다 실행
-  if (!isOnline.value) {
-    console.log('오프라인 상태입니다')
-  }
-})
-
-// 검색 시뮬레이션 (디바운스 예제)
-const searchResults = ref([])
-const isSearching = ref(false)
-let searchTimeout = null
-
-watch(searchQuery, (query) => {
-  // 이전 타이머 취소
-  if (searchTimeout) clearTimeout(searchTimeout)
-
-  if (!query) {
-    searchResults.value = []
-    return
-  }
-
-  isSearching.value = true
-
-  // 디바운스: 300ms 후에 검색
-  searchTimeout = setTimeout(() => {
-    // 실제로는 API 호출
-    searchResults.value = [
-      `${query} 관련 결과 1`,
-      `${query} 관련 결과 2`,
-      `${query} 관련 결과 3`,
-    ]
-    isSearching.value = false
-    addLog(`검색 완료: "${query}"`)
-  }, 300)
-})
 </script>
 
 <template>
-  <div>
-    <h1>Watch - 감시자</h1>
+  <div id="app">
+    <!-- 네비게이션 -->
+    <nav class="navbar">
+      <div class="nav-brand">Vue Router</div>
+      <div class="nav-links">
+        <!--
+          RouterLink: a 태그처럼 동작하지만
+          페이지 새로고침 없이 URL을 변경합니다.
 
-    <!-- 1. 기본 watch -->
-    <section>
-      <h2>1. 검색어 감시</h2>
-      <input v-model="searchQuery" placeholder="검색어 입력..." />
-      <p v-if="isSearching">검색 중...</p>
-      <ul v-else-if="searchResults.length">
-        <li v-for="result in searchResults" :key="result">{{ result }}</li>
-      </ul>
-      <p class="note">
-        입력 후 300ms 디바운스 적용 (타이핑이 멈추면 검색)
-      </p>
-    </section>
+          to: 이동할 경로 (문자열 또는 객체)
+        -->
+        <RouterLink to="/">홈</RouterLink>
+        <RouterLink to="/about">소개</RouterLink>
+        <RouterLink to="/contact">연락처</RouterLink>
 
-    <!-- 2. 카운터 (immediate) -->
-    <section>
-      <h2>2. 카운터 감시 (immediate)</h2>
-      <p>카운트: {{ count }}</p>
-      <button @click="count++">+1</button>
-      <button @click="count--">-1</button>
-      <pre class="code-block">
-watch(count, (newValue) => {
-  console.log('카운트:', newValue)
-}, { immediate: true })  // 초기값도 실행
-      </pre>
-    </section>
-
-    <!-- 3. 객체 감시 (deep) -->
-    <section>
-      <h2>3. 객체 감시 (deep)</h2>
-      <div class="input-group">
-        <label>
-          이름: <input v-model="user.name" />
-        </label>
-        <label>
-          나이: <input v-model.number="user.age" type="number" />
-        </label>
+        <!--
+          name을 사용한 네비게이션 (권장)
+          경로가 변경되어도 코드 수정 불필요
+        -->
+        <!-- <RouterLink :to="{ name: 'home' }">홈</RouterLink> -->
       </div>
-      <p>사용자: {{ user.name }} ({{ user.age }}세)</p>
-      <pre class="code-block">
-watch(user, (newValue) => {
-  console.log('변경됨:', newValue)
-}, { deep: true })  // 내부 속성 변화도 감시
-      </pre>
-    </section>
+    </nav>
 
-    <!-- 4. 특정 속성 감시 -->
-    <section>
-      <h2>4. 특정 속성만 감시</h2>
-      <pre class="code-block">
-// getter 함수 사용
-watch(
-  () => user.value.age,
-  (newAge, oldAge) => {
-    console.log(`나이: ${oldAge} -> ${newAge}`)
-  }
-)
-      </pre>
-    </section>
+    <!-- 라우트 정보 표시 -->
+    <div class="route-info">
+      현재 경로: <code>{{ $route.path }}</code>
+    </div>
 
-    <!-- 5. watchEffect -->
-    <section>
-      <h2>5. watchEffect</h2>
-      <label>
-        <input type="checkbox" v-model="isOnline" />
-        온라인 상태: {{ isOnline ? '온라인' : '오프라인' }}
-      </label>
-      <pre class="code-block">
-// 콜백 내 사용된 반응형 데이터 자동 추적
-watchEffect(() => {
-  if (!isOnline.value) {
-    console.log('오프라인 상태')
-  }
-})
-      </pre>
-    </section>
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="content">
+      <!--
+        RouterView: 라우트에 매칭된 컴포넌트가 여기에 렌더링됩니다.
 
-    <!-- 6. watch vs watchEffect -->
-    <section>
-      <h2>6. watch vs watchEffect 비교</h2>
-      <table>
-        <thead>
-        <tr>
-          <th></th>
-          <th>watch</th>
-          <th>watchEffect</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr>
-          <td>추적</td>
-          <td>명시적으로 지정</td>
-          <td>자동 추적</td>
-        </tr>
-        <tr>
-          <td>이전 값</td>
-          <td>접근 가능</td>
-          <td>접근 불가</td>
-        </tr>
-        <tr>
-          <td>초기 실행</td>
-          <td>immediate 필요</td>
-          <td>즉시 실행</td>
-        </tr>
-        <tr>
-          <td>용도</td>
-          <td>특정 값 변화 반응</td>
-          <td>여러 값 동기화</td>
-        </tr>
-        </tbody>
-      </table>
-    </section>
+        / -> Home.vue
+        /about -> About.vue
+        /contact -> Contact.vue
+      -->
+      <RouterView />
+    </main>
 
-    <!-- 7. 로그 -->
-    <section>
-      <h2>7. 실행 로그</h2>
-      <div class="log-container">
-        <div v-for="(log, i) in logs" :key="i" class="log-item">
-          <span class="log-time">{{ log.time }}</span>
-          <span class="log-message">{{ log.message }}</span>
-        </div>
-        <p v-if="logs.length === 0" class="no-logs">
-          위의 값들을 변경해보세요.
-        </p>
+    <!-- 라우터 설명 -->
+    <aside class="sidebar">
+      <h3>Vue Router 구성요소</h3>
+
+      <div class="info-box">
+        <h4>RouterLink</h4>
+        <ul>
+          <li>선언적 네비게이션</li>
+          <li>페이지 새로고침 없음</li>
+          <li>active 클래스 자동 추가</li>
+        </ul>
+        <pre class="code-block">
+&lt;RouterLink to="/about"&gt;
+  소개
+&lt;/RouterLink&gt;
+        </pre>
       </div>
-    </section>
 
-    <!-- 8. 정리 -->
-    <section class="summary">
-      <h2>8. 정리</h2>
-      <ul>
-        <li>watch: 특정 값의 변화를 감시</li>
-        <li>immediate: 컴포넌트 마운트 시 즉시 실행</li>
-        <li>deep: 객체 내부 속성 변화도 감시</li>
-        <li>getter 함수로 특정 속성만 감시 가능</li>
-        <li>watchEffect: 자동 의존성 추적</li>
-        <li>부수 효과(API 호출, 로깅 등)에 사용</li>
-      </ul>
-    </section>
+      <div class="info-box">
+        <h4>RouterView</h4>
+        <ul>
+          <li>라우트 컴포넌트 렌더링 위치</li>
+          <li>URL에 따라 다른 컴포넌트 표시</li>
+        </ul>
+        <pre class="code-block">
+&lt;RouterView /&gt;
+        </pre>
+      </div>
+
+      <div class="info-box">
+        <h4>router/index.js</h4>
+        <pre class="code-block">
+const routes = [
+  {
+    path: '/',
+    name: 'home',
+    component: Home
+  },
+  {
+    path: '/about',
+    name: 'about',
+    component: About
+  }
+]
+        </pre>
+      </div>
+    </aside>
   </div>
 </template>
 
 <style scoped>
-section {
-  margin: 20px 0;
+#app {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  grid-template-columns: 1fr 300px;
+}
+
+.navbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  padding: 15px 20px;
+  background: #35495e;
+  color: white;
+}
+
+.nav-brand {
+  font-size: 20px;
+  font-weight: bold;
+  margin-right: 30px;
+  color: #42b883;
+}
+
+.nav-links {
+  display: flex;
+  gap: 20px;
+}
+
+.nav-links a {
+  color: white;
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  transition: background 0.3s;
+}
+
+.nav-links a:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* RouterLink의 활성 상태 스타일 */
+.nav-links a.router-link-active {
+  background: #42b883;
+}
+
+.route-info {
+  grid-column: 1 / -1;
+  padding: 10px 20px;
+  background: #f5f5f5;
+  font-size: 14px;
+}
+
+.route-info code {
+  background: #e0e0e0;
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.content {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.sidebar {
+  background: #f9f9f9;
+  padding: 20px;
+  border-left: 1px solid #ddd;
+  overflow-y: auto;
+}
+
+.sidebar h3 {
+  color: #42b883;
+  margin-bottom: 15px;
+}
+
+.info-box {
+  margin-bottom: 20px;
   padding: 15px;
+  background: white;
   border: 1px solid #ddd;
   border-radius: 8px;
 }
 
-h2 {
-  color: #42b883;
+.info-box h4 {
+  color: #35495e;
   margin-bottom: 10px;
 }
 
-.input-group {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 10px;
-}
-
-.input-group label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-input[type="text"],
-input[type="number"],
-input:not([type]) {
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-button {
-  margin: 5px;
-  padding: 8px 16px;
-  cursor: pointer;
-  border: 1px solid #42b883;
-  background: white;
-  border-radius: 4px;
-}
-
-button:hover {
-  background: #42b883;
-  color: white;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 10px 0;
-}
-
-th, td {
-  border: 1px solid #ddd;
-  padding: 10px;
-  text-align: left;
-}
-
-th {
-  background: #f5f5f5;
-}
-
-ul {
+.info-box ul {
   padding-left: 20px;
+  margin-bottom: 10px;
 }
 
-li {
-  margin: 5px 0;
+.info-box li {
+  font-size: 14px;
+  margin: 3px 0;
 }
 
 .code-block {
   background: #f5f5f5;
-  padding: 15px;
+  padding: 10px;
   border-radius: 4px;
   font-family: monospace;
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.4;
   overflow-x: auto;
-  margin-top: 10px;
-}
-
-.note {
-  font-size: 14px;
-  color: #666;
-  font-style: italic;
-}
-
-.log-container {
-  background: #1a1a1a;
-  color: #00ff00;
-  padding: 15px;
-  border-radius: 4px;
-  font-family: monospace;
-  font-size: 14px;
-  min-height: 150px;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.log-item {
-  margin: 5px 0;
-}
-
-.log-time {
-  color: #888;
-  margin-right: 10px;
-}
-
-.no-logs {
-  color: #666;
-}
-
-.summary {
-  background: rgba(66, 184, 131, 0.1);
+  margin: 0;
 }
 </style>
